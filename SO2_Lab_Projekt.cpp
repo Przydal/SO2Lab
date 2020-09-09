@@ -123,8 +123,6 @@ else if(argc == 5 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[
 
     //Variant 2
     void_startCounter();
-    HANDLE hThread;
-    DWORD ThreadID;
     PMYDATA pDataArray[NUMBER_OF_THREADS];
     DWORD   dwThreadIdArray[NUMBER_OF_THREADS];
     HANDLE  hThreadArray[NUMBER_OF_THREADS];
