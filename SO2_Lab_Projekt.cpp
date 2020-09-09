@@ -1,8 +1,8 @@
 /**
- * @file ProgramPoLab6
+ * @file ProgramLab7
  * @author Jakub Przydalski
- * @date 26/06/2020
- * @brief Systemy operacyjne II, program po Lab 6 z uzyciem Semaphore
+ * @date 28/06/2020
+ * @brief Systemy operacyjne II, program na Lab 7
  */
 
 #include<iostream>
@@ -11,11 +11,14 @@
 #include<iterator>
 #include<sstream>
 #include<time.h>
+#include<math.h>
 
 #define NUMBER_OF_THREADS 3
 #define FIRST_THREAD 0
 #define SECOND_THREAD 1
 #define THIRD_THREAD 2
+
+std::string outputPath = "Output.txt";
 
 HANDLE hSemaphore[3];
 int threadQueue[NUMBER_OF_THREADS] = {FIRST_THREAD, SECOND_THREAD, THIRD_THREAD};
@@ -25,25 +28,36 @@ __int64 CounterStart = 0;
 
 bool bool_writeLineToFile(HANDLE hFile);
 bool bool_generateRandomNumbersAndSaveToFile(HANDLE hFile, int howManyRandomNumbers);
-void void_countAverage(std::vector<int> vector_int_numbersFromFile);
-void void_countMin(std::vector<int> vector_int_numbersFromFile);
-void void_countMax(std::vector<int> vector_int_numbersFromFile);
+float float_countAverage(std::vector<int> vector_int_numbersFromFile);
+int int_countMin(std::vector<int> vector_int_numbersFromFile);
+int int_countMax(std::vector<int> vector_int_numbersFromFile);
 DWORD WINAPI threadFunction_countAverage(LPVOID lpParam);
 DWORD WINAPI threadFunction_countMin(LPVOID lpParam);
 DWORD WINAPI threadFunction_countMax(LPVOID lpParam);
-void startCounter();
-double getCounter();
+void void_startCounter();
+double double_getCounter();
 
 typedef struct DataToThread{
     std::vector<int> dataFromFile;
 } MYDATA, *PMYDATA;
 
 int main(int argc, char** argv){
-if(argc == 2 && atoi(argv[1])>0 && atoi(argv[1]) <100001){
+if(argc == 4 && atoi(argv[1])>0 && atoi(argv[1])<100001 && atoi(argv[2])>0 && atoi(argv[3])>0){
     std::cout << "[Process 1]: Process #1 starts" << std::endl;
+    HANDLE hOutputFileHeader = CreateFile(outputPath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if(hOutputFileHeader == INVALID_HANDLE_VALUE){
+        std::cout << "[Process 1]: Unable to create file!" << std::endl;
+        return 2;
+    }
+    std::string argmnt1 = argv[1];
+    std::string strText = "[Total numbers: "+argmnt1+"][Replies: "+argv[3]+"][Pause: "+argv[2]+" sec]";
+    WriteFile(hOutputFileHeader, strText.c_str(), strText.size(), nullptr, nullptr);
+    bool_writeLineToFile(hOutputFileHeader);
+    CloseHandle(hOutputFileHeader);
+    for(int i = 1 ; i<=atoi(argv[3]); i++){
     STARTUPINFOA si = {sizeof(si)};
     PROCESS_INFORMATION pi;
-    std::string path = "SO2_Lab_Projekt.exe 1337 32167 Process2Call";
+    std::string path = "SO2_Lab_Projekt.exe 1337 32167 Process2Call "+std::to_string(i);
     CreateProcessA(NULL, &path[0], NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &si, &pi);
     std::cout << "[Process 2]: Process #2 created and waiting" << std::endl;
     std::string filePath = "Numbers.txt";
@@ -65,10 +79,16 @@ if(argc == 2 && atoi(argv[1])>0 && atoi(argv[1]) <100001){
     GetExitCodeProcess(pi.hProcess, &exitCode);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
+    Sleep(atoi(argv[2])*1000);
+    }
     std::cout << "[Process 1]: Process #1 termination" << std::endl;
     return 0;
 }
-else if(argc == 4 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[3], "Process2Call") == 0){
+else if(argc == 5 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[3], "Process2Call") == 0){
+    int int_cycle = atoi(argv[4]);
+    float float_avg = 0;
+    int int_min = 0, int_max = 0;
+    double double_singleThreadTime= 0.00, double_multiThreadTime = 0.00;
     std::cout << "[Process 2]: Accessing the file" << std::endl;
     std::string filePath = "Numbers.txt";
     HANDLE hFile2 = CreateFile(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -94,14 +114,15 @@ else if(argc == 4 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[
     std::cout << "[Process 2]: Data from the file loaded" << std::endl;
 
     //Variant 1
-    startCounter();
-    void_countAverage(b);
-    void_countMin(b);
-    void_countMax(b);
-    std::cout << "[Process 2]: [Variant A]: Time: " << getCounter() << "ms" << std::endl;
+    void_startCounter();
+    float_avg = float_countAverage(b);
+    int_min = int_countMin(b);
+    int_max = int_countMax(b);
+    double_singleThreadTime = double_getCounter();
+    std::cout << "[Process 2]: [Variant A]: Time: " << double_singleThreadTime << "ms" << std::endl;
 
     //Variant 2
-    startCounter();
+    void_startCounter();
     HANDLE hThread;
     DWORD ThreadID;
     PMYDATA pDataArray[NUMBER_OF_THREADS];
@@ -109,7 +130,6 @@ else if(argc == 4 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[
     HANDLE  hThreadArray[NUMBER_OF_THREADS];
     for(int i=0 ; i < NUMBER_OF_THREADS; i++){
         hSemaphore[i] = CreateSemaphore(NULL, 0, 1, NULL);
-
         if(hSemaphore[i]==INVALID_HANDLE_VALUE){
             std::cout << "[Process 2]: [Variant B]: Unable to Create Semaphore: " << i << std::endl;
             return 5;
@@ -147,7 +167,15 @@ else if(argc == 4 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[
             pDataArray[i] = NULL;
         }
     }
-    std::cout << "[Process 2]: [Variant B]: Time: " << getCounter() << "ms" << std::endl;
+    double_multiThreadTime = double_getCounter();
+    std::cout << "[Process 2]: [Variant B]: Time: " << double_multiThreadTime << "ms" << std::endl;
+    HANDLE hOutputFile = CreateFile(outputPath.c_str(), FILE_APPEND_DATA, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    std::string strText = std::to_string(int_cycle)+".\t| AVG: "+std::to_string(float_avg)+"\t| MIN: "+std::to_string(int_min)+"\t| MAX: "+std::to_string(int_max)+"\t| SINGLE THREAD TIME: "+std::to_string(double_singleThreadTime)+"\t| MULTI THREAD TIME: "+std::to_string(double_multiThreadTime)+"\t|";
+    WriteFile(hOutputFile, strText.c_str(), strText.size(), nullptr, nullptr);
+    bool_writeLineToFile(hOutputFile);
+    CloseHandle(hOutputFile);
+
     std::cout << "[Process 2]: Process #2 termination" << std::endl;
     return 0;
 }else{
@@ -177,31 +205,34 @@ bool bool_generateRandomNumbersAndSaveToFile(HANDLE hFile, int int_howManyRandom
     }
     return 1;
 }
-void void_countAverage(std::vector<int> vector_int_numbersFromFile){
-    float average = 0.00;
+float float_countAverage(std::vector<int> vector_int_numbersFromFile){
+    float float_average = 0.00;
     for(int n: vector_int_numbersFromFile){
-        average+=n;
+        float_average+=n;
     }
-    average=average/vector_int_numbersFromFile.size();
-    std::cout << "[Process 2]: [Variant A]: Average from input is: " << average << std::endl;
+    float_average=float_average/vector_int_numbersFromFile.size();
+    std::cout << "[Process 2]: [Variant A]: Average from input is: " << float_average << std::endl;
+    return float_average;
 }
-void void_countMin(std::vector<int> vector_int_numbersFromFile){
-    float float_minimum = 101.00;
+int int_countMin(std::vector<int> vector_int_numbersFromFile){
+    int int_minimum = 101;
     for(int n: vector_int_numbersFromFile){
-        if(n<float_minimum){
-            float_minimum = n;
+        if(n<int_minimum){
+            int_minimum = n;
         }
     }
-    std::cout << "[Process 2]: [Variant A]: Minimum value from input is " << float_minimum << std::endl;
+    std::cout << "[Process 2]: [Variant A]: Minimum value from input is " << int_minimum << std::endl;
+    return int_minimum;
 }
-void void_countMax(std::vector<int> vector_int_numbersFromFile){
-    float float_maximum = 0.00;
+int int_countMax(std::vector<int> vector_int_numbersFromFile){
+    int int_maximum = 0;
     for(int n: vector_int_numbersFromFile){
-        if(n>float_maximum){
-            float_maximum = n;
+        if(n>int_maximum){
+            int_maximum = n;
         }
     }
-    std::cout << "[Process 2]: [Variant A]: Maximum value from input is " << float_maximum << std::endl;
+    std::cout << "[Process 2]: [Variant A]: Maximum value from input is " << int_maximum << std::endl;
+    return int_maximum;
 }
 DWORD WINAPI threadFunction_countAverage(LPVOID lpParam){
     PMYDATA pDataArray;
@@ -244,7 +275,7 @@ DWORD WINAPI threadFunction_countMax(LPVOID lpParam){
     ReleaseSemaphore(hSemaphore[threadQueue[thQue++]], 1, 0);
     return 0;
 }
-void startCounter(){
+void void_startCounter(){
     LARGE_INTEGER li;
     if(!QueryPerformanceFrequency(&li))
     std::cout << "QueryPerformanceFrequency failed!\n" << std::endl;
@@ -254,7 +285,7 @@ void startCounter(){
     QueryPerformanceCounter(&li);
     CounterStart = li.QuadPart;
 }
-double getCounter(){
+double double_getCounter(){
     LARGE_INTEGER li;
     QueryPerformanceCounter(&li);
     return double(li.QuadPart-CounterStart)/PCFreq;
