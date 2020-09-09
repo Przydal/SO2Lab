@@ -1,8 +1,8 @@
 /**
- * @file ProgramLab7
+ * @file ProgramLab8
  * @author Jakub Przydalski
  * @date 28/06/2020
- * @brief Systemy operacyjne II, program na Lab 7
+ * @brief Systemy operacyjne II, program na Lab 8
  */
 
 #include<iostream>
