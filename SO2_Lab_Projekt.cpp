@@ -2,7 +2,7 @@
  * @file ProgramPoLab6
  * @author Jakub Przydalski
  * @date 26/06/2020
- * @brief Systemy operacyjne II, program po Lab 6.
+ * @brief Systemy operacyjne II, program po Lab 6 z uzyciem Semaphore
  */
 
 #include<iostream>
@@ -17,8 +17,9 @@
 #define SECOND_THREAD 1
 #define THIRD_THREAD 2
 
-HANDLE hMutex;
-int threadQueue = 0;
+HANDLE hSemaphore[3];
+int threadQueue[NUMBER_OF_THREADS] = {FIRST_THREAD, SECOND_THREAD, THIRD_THREAD};
+int thQue = 0;
 double PCFreq = 0.0;
 __int64 CounterStart = 0;
 
@@ -38,7 +39,7 @@ typedef struct DataToThread{
 } MYDATA, *PMYDATA;
 
 int main(int argc, char** argv){
-if(argc == 2 && atoi(argv[1])>0 && atoi(argv[1]) <101){
+if(argc == 2 && atoi(argv[1])>0 && atoi(argv[1]) <100001){
     std::cout << "[Process 1]: Process #1 starts" << std::endl;
     STARTUPINFOA si = {sizeof(si)};
     PROCESS_INFORMATION pi;
@@ -78,7 +79,7 @@ else if(argc == 4 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[
     else{
     std::cout << "[Process 2]: File opened successfully" << std::endl;
     }
-    constexpr size_t BUFSIZE = 1024;
+    constexpr size_t BUFSIZE = 500000;
     char buffer[BUFSIZE];
     DWORD dwBytesToRead = BUFSIZE -1;
     DWORD dwBytesRead = 0;
@@ -106,13 +107,20 @@ else if(argc == 4 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[
     PMYDATA pDataArray[NUMBER_OF_THREADS];
     DWORD   dwThreadIdArray[NUMBER_OF_THREADS];
     HANDLE  hThreadArray[NUMBER_OF_THREADS];
-    hMutex = CreateMutex(NULL, FALSE, NULL);
+    for(int i=0 ; i < NUMBER_OF_THREADS; i++){
+        hSemaphore[i] = CreateSemaphore(NULL, 0, 1, NULL);
+
+        if(hSemaphore[i]==INVALID_HANDLE_VALUE){
+            std::cout << "[Process 2]: [Variant B]: Unable to Create Semaphore: " << i << std::endl;
+            return 5;
+        }
+    }
 
     for( int i=0; i<NUMBER_OF_THREADS; i++ ){
         // Allocate memory for thread data.
         pDataArray[i] = (PMYDATA) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(MYDATA));
         if( pDataArray[i] == NULL ){
-            std::cout << "[Process2]: [Variant B]: Unable to allocate memory" << std::endl;
+            std::cout << "[Process 2]: [Variant B]: Unable to allocate memory" << std::endl;
             return 1;
         }
         pDataArray[i]->dataFromFile = b;
@@ -128,10 +136,12 @@ else if(argc == 4 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[
             return 4;
         }
     }
+    ReleaseSemaphore(hSemaphore[threadQueue[thQue++]], 1, 0);
     WaitForMultipleObjects(NUMBER_OF_THREADS, hThreadArray, TRUE, INFINITE);
 
     for(int i=0; i<NUMBER_OF_THREADS; i++){
         CloseHandle(hThreadArray[i]);
+        CloseHandle(hSemaphore[i]);
         if(pDataArray[i] != NULL){
             HeapFree(GetProcessHeap(), 0, pDataArray[i]);
             pDataArray[i] = NULL;
@@ -201,14 +211,9 @@ DWORD WINAPI threadFunction_countAverage(LPVOID lpParam){
         average+=i;
     }
     average/=pDataArray->dataFromFile.size();
-    while(threadQueue<3){
-        if(threadQueue==FIRST_THREAD){
-            WaitForSingleObject(hMutex, INFINITE);
-            std::cout << "[Process 2]: [Variant B]: [Thread 1]: Average from input is: " << average << std::endl;
-            threadQueue++;
-            ReleaseMutex(hMutex);
-        }
-    }
+    WaitForSingleObject(hSemaphore[0], INFINITE);
+    std::cout << "[Process 2]: [Variant B]: [Thread 1]: Average from input is: " << average << std::endl;
+    ReleaseSemaphore(hSemaphore[threadQueue[thQue++]], 1, 0);
     return 0;
 }
 DWORD WINAPI threadFunction_countMin(LPVOID lpParam){
@@ -220,14 +225,9 @@ DWORD WINAPI threadFunction_countMin(LPVOID lpParam){
             float_minimum = i;
         }
     }
-    while(threadQueue<3){
-        if(threadQueue==SECOND_THREAD){
-            WaitForSingleObject(hMutex,INFINITE);
-            std::cout << "[Process 2]: [Variant B]: [Thread 2]: Minimum value from input is " << float_minimum << std::endl;
-            threadQueue++;
-            ReleaseMutex(hMutex);
-        }
-    }
+    WaitForSingleObject(hSemaphore[1],INFINITE);
+    std::cout << "[Process 2]: [Variant B]: [Thread 2]: Minimum value from input is " << float_minimum << std::endl;
+    ReleaseSemaphore(hSemaphore[threadQueue[thQue++]], 1, 0);
     return 0;
 }
 DWORD WINAPI threadFunction_countMax(LPVOID lpParam){
@@ -239,14 +239,9 @@ DWORD WINAPI threadFunction_countMax(LPVOID lpParam){
             float_maximum = i;
         }
     }
-    while(threadQueue<3){
-        if(threadQueue==THIRD_THREAD){
-            WaitForSingleObject(hMutex, INFINITE);
-            std::cout << "[Process 2]: [Variant B]: [Thread 3]: Maximum value from input is " << float_maximum << std::endl;
-            threadQueue++;
-            ReleaseMutex(hMutex);
-        }
-    }
+    WaitForSingleObject(hSemaphore[2], INFINITE);
+    std::cout << "[Process 2]: [Variant B]: [Thread 3]: Maximum value from input is " << float_maximum << std::endl;
+    ReleaseSemaphore(hSemaphore[threadQueue[thQue++]], 1, 0);
     return 0;
 }
 void startCounter(){
