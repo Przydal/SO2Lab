@@ -1,8 +1,8 @@
 /**
- * @file ProgramPoLab4
+ * @file ProgramPoLab5
  * @author Jakub Przydalski
  * @date 26/06/2020
- * @brief Systemy operacyjne II, program po Lab 4.
+ * @brief Systemy operacyjne II, program po Lab 5.
  */
 
 #include<iostream>
@@ -16,13 +16,15 @@
 bool bool_writeLineToFile(HANDLE hFile);
 bool bool_generateRandomNumbersAndSaveToFile(HANDLE hFile, int howManyRandomNumbers);
 float float_countAverage(std::vector<int> vector_int_numbersFromFile);
+float float_countMin(std::vector<int> vector_int_numbersFromFile);
+float float_countMax(std::vector<int> vector_int_numbersFromFile);
 
 int main(int argc, char** argv){
 if(argc == 2 && atoi(argv[1])>0 && atoi(argv[1]) <101){
     std::cout << "[Process 1]: Process #1 starts" << std::endl;
     STARTUPINFOA si = {sizeof(si)};
     PROCESS_INFORMATION pi;
-    std::string path = "SO2_Lab_Projekt.exe 1337 32167 Process2Call";
+    std::string path = "SO2_LAB_Projekt.exe 1337 32167 Process2Call";
     CreateProcessA(NULL, &path[0], NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &si, &pi);
     std::cout << "[Process 2]: Process #2 created and waiting" << std::endl;
     std::string filePath = "Numbers.txt";
@@ -71,6 +73,10 @@ else if(argc == 4 && atoi(argv[1])==1337 && atoi(argv[2])==32167 && strcmp(argv[
     std::cout << "[Process 2]: Data from file loaded" << std::endl;
     float float_average = float_countAverage(b);
     std::cout << "[Process 2]: Average from input is " << float_average <<" from " << b.size() << " numbers" << std::endl;
+    float float_min = float_countMin(b);
+    std::cout << "[Process 2]: Minimum value from input is " << float_min <<" from " << std::endl;
+    float float_max = float_countMax(b);
+    std::cout << "[Process 2]: Maximum value from input is " << float_max <<" from " << std::endl;
     std::cout << "[Process 2]: Process #2 termination" << std::endl;
     return 0;
 }
@@ -111,3 +117,25 @@ float float_countAverage(std::vector<int> vector_int_numbersFromFile){
     average=average/vector_int_numbersFromFile.size();
     return average;
 }
+
+float float_countMin(std::vector<int> vector_int_numbersFromFile){
+    float float_minimum = 101.00;
+    for(int n: vector_int_numbersFromFile){
+        if(n<float_minimum){
+            float_minimum = n;
+        }
+    }
+    return float_minimum;
+}
+
+float float_countMax(std::vector<int> vector_int_numbersFromFile){
+    float float_maximum = 0.00;
+    for(int n: vector_int_numbersFromFile){
+        if(n>float_maximum){
+            float_maximum = n;
+        }
+    }
+    return float_maximum;
+}
+
+
