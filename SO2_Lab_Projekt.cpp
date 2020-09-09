@@ -1,8 +1,8 @@
 /**
- * @file ProgramPoLab2
+ * @file ProgramPoLab3
  * @author Jakub Przydalski
  * @date 26/06/2020
- * @brief Systemy operacyjne II, program po Lab 2.
+ * @brief Systemy operacyjne II, program po Lab 3.
  */
 
 #include<iostream>
@@ -13,8 +13,8 @@ bool bool_openFileInNotepad(std::string name);
 
 int main(int argc, char** argv){
 std::string strText = "";
-std::string filePath = "OutputFile.txt";
-HANDLE hFile = CreateFile(filePath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+std::string filePath = "log.txt";
+HANDLE hFile = CreateFile(filePath.c_str(), GENERIC_WRITE, 0, 1, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
 if(hFile == INVALID_HANDLE_VALUE){
     std::cout << "Unable to create file " << std::endl;
@@ -23,17 +23,10 @@ if(hFile == INVALID_HANDLE_VALUE){
 else{
     std::cout << "File created successfully" << std::endl;
 }
+std::string userInput;
 
-for(int i=1; i<argc; i++){
-strText = argv[i];
-WriteFile(hFile, strText.c_str(), strText.size(), nullptr, nullptr);
-bool_writeLineToFile(hFile);
-}
+
 CloseHandle(hFile);
-std::string notepadStatus = getenv("NOTEPAD");
-if(notepadStatus.compare("TRUE")==0){
-    bool_openFileInNotepad(filePath.c_str());
-}
 return 0;
 }
 
